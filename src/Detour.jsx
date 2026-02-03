@@ -14,11 +14,11 @@ const logEvent = (eventName, params = {}) => {
 
   // LocalStorageに蓄積（MVP検証用）
   try {
-    const logs = JSON.parse(localStorage.getItem('where_analytics') || '[]');
+    const logs = JSON.parse(localStorage.getItem('yorumichi_analytics') || '[]');
     logs.push(event);
     // 最新500件のみ保持
     if (logs.length > 500) logs.shift();
-    localStorage.setItem('where_analytics', JSON.stringify(logs));
+    localStorage.setItem('yorumichi_analytics', JSON.stringify(logs));
   } catch (e) {
     console.warn('Analytics storage failed:', e);
   }
@@ -2149,7 +2149,7 @@ export default function Detour() {
           {/* Header */}
           <div className={`text-center mb-12 transition-all duration-700 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
             <h1 className="text-[36px] font-bold tracking-tight text-white mb-3">
-              where
+              yorumichi
             </h1>
             <p className="text-[15px] text-[#8E8E93]">
               決めて、動く。週末おでかけ提案
