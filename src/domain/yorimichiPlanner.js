@@ -1,5 +1,5 @@
 ﻿export const DEFAULT_YORIMICHI_INPUT = {
-  homeStation: 'omika',
+  homeStation: '',
   time: 60,
   range: 'walk',
   zure: 'safe',
@@ -9,11 +9,18 @@
   ngCash: false,
 };
 
+// 大甕〜日立エリアの駅名パターン
+const isOmikaHitachiArea = (stationName) => {
+  const normalized = stationName.replace(/駅$/, '');
+  return ['大甕', '常陸多賀', '日立'].includes(normalized);
+};
+
 export const selectYorimichiSpots = (input, yorimichiData) => {
   const { homeStation, time, range: _range, zure, ngQueue, ngNoisy, ngCash } = input;
   let spots = [...yorimichiData.spots];
 
-  if (homeStation === 'omika') {
+  // 入力された駅名でフィルタリング
+  if (homeStation && isOmikaHitachiArea(homeStation)) {
     spots = spots.filter((spot) => spot.homeStation === 'omika');
   } else {
     spots = spots.filter((spot) => !spot.homeStation);
