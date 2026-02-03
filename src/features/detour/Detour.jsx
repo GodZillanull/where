@@ -69,8 +69,19 @@ export default function Detour() {
       },
       (error) => {
         setIsGettingLocation(false);
+        setUseCurrentLocation(false);
         if (error.code === error.PERMISSION_DENIED) {
-          alert('位置情報の使用が許可されていません。設定から許可してください。');
+          const openSettings = confirm(
+            '位置情報の使用が許可されていません。\n\n' +
+            '設定アプリを開いて許可しますか？\n\n' +
+            '【設定方法】\n' +
+            'iOS: 設定 → プライバシー → 位置情報サービス → Safari\n' +
+            'Android: 設定 → アプリ → ブラウザ → 権限 → 位置情報'
+          );
+          if (openSettings) {
+            // iOSの設定アプリを開く試み（動作しない場合もある）
+            window.location.href = 'app-settings:';
+          }
         } else {
           alert('位置情報の取得に失敗しました');
         }
