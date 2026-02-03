@@ -29,39 +29,62 @@ export default function Detour() {
   const [yorimichiResults, setYorimichiResults] = useState([]);
   const [selectedYorimichi, setSelectedYorimichi] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
 
-  // 現在地から最寄り駅を取得
-  const getNearestStation = async () => {
+  // 現在地から最寄り駅を取得（JSONP使用）
+  const getNearestStation = () => {
     if (!navigator.geolocation) {
       alert('お使いのブラウザは位置情報に対応していません');
       return;
     }
     setIsGettingLocation(true);
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        });
-      });
-      const { latitude, longitude } = position.coords;
-      // HeartRails Express APIで最寄り駅を取得
-      const res = await fetch(
-        `https://express.heartrails.com/api/json?method=getStations&x=${longitude}&y=${latitude}`
-      );
-      const data = await res.json();
-      if (data.response?.station?.[0]) {
-        const station = data.response.station[0];
-        setYorimichiInput(prev => ({ ...prev, homeStation: station.name }));
-      } else {
-        alert('最寄り駅が見つかりませんでした');
-      }
-    } catch (error) {
-      alert('位置情報の取得に失敗しました');
-    } finally {
-      setIsGettingLocation(false);
-    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        // HeartRails Express API（JSONPで取得）
+        const callbackName = 'heartrailsCallback_' + Date.now();
+        const script = document.createElement('script');
+
+        window[callbackName] = (data) => {
+          if (data.response?.station?.[0]) {
+            const station = data.response.station[0];
+            setYorimichiInput(prev => ({ ...prev, homeStation: station.name }));
+          } else {
+            alert('最寄り駅が見つかりませんでした');
+          }
+          setIsGettingLocation(false);
+          delete window[callbackName];
+          script.remove();
+        };
+
+        script.src = `https://express.heartrails.com/api/json?method=getStations&x=${longitude}&y=${latitude}&callback=${callbackName}`;
+        script.onerror = () => {
+          alert('最寄り駅の取得に失敗しました');
+          setIsGettingLocation(false);
+          delete window[callbackName];
+          script.remove();
+        };
+        document.body.appendChild(script);
+      },
+      (error) => {
+        setIsGettingLocation(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          alert('位置情報の使用が許可されていません。設定から許可してください。');
+        } else {
+          alert('位置情報の取得に失敗しました');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
+
+  // 現在地トグルが変更されたとき
+  useEffect(() => {
+    if (useCurrentLocation) {
+      getNearestStation();
+    }
+  }, [useCurrentLocation]);
   const [showYorimichiGo, setShowYorimichiGo] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [showMehReasons, setShowMehReasons] = useState(false); // 微妙理由選択表示
@@ -618,23 +641,34 @@ export default function Detour() {
             {/* Station Selection */}
             <div className={`mb-6 transition-all duration-700 delay-50 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <p className="text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-3">最寄駅</p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={yorimichiInput.homeStation}
-                  onChange={(e) => setYorimichiInput(prev => ({ ...prev, homeStation: e.target.value }))}
-                  placeholder="例: 大甕駅"
-                  className="flex-1 px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300"
-                  style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-                />
-                <button
-                  type="button"
-                  onClick={getNearestStation}
-                  disabled={isGettingLocation}
-                  className="px-4 py-3 rounded-xl text-[14px] font-medium bg-[#1D1D1F] text-white transition-all duration-300 active:scale-[0.98] disabled:opacity-50"
+              {/* 入力欄 */}
+              <input
+                type="text"
+                value={yorimichiInput.homeStation}
+                onChange={(e) => setYorimichiInput(prev => ({ ...prev, homeStation: e.target.value }))}
+                placeholder="駅名を入力"
+                disabled={useCurrentLocation}
+                className="w-full px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300 disabled:bg-[#F5F5F5] disabled:text-[#86868B]"
+                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+              />
+              {/* 現在地トグル */}
+              <div
+                className="flex items-center justify-between mt-3 p-4 rounded-xl bg-[#E8F5E9] cursor-pointer transition-all duration-300"
+                onClick={() => setUseCurrentLocation(!useCurrentLocation)}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-[20px]">📍</span>
+                  <span className="text-[14px] font-medium text-[#2E7D32]">
+                    {isGettingLocation ? '現在地を取得中...' : '現在地周辺から探す'}
+                  </span>
+                </div>
+                <div
+                  className={`w-12 h-7 rounded-full transition-all duration-300 ${useCurrentLocation ? 'bg-[#4CAF50]' : 'bg-[#E0E0E0]'}`}
                 >
-                  {isGettingLocation ? '取得中...' : '現在地'}
-                </button>
+                  <div
+                    className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-all duration-300 mt-0.5 ${useCurrentLocation ? 'translate-x-5.5 ml-0.5' : 'translate-x-0.5'}`}
+                  />
+                </div>
               </div>
             </div>
 
