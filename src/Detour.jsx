@@ -64,6 +64,11 @@ const Analytics = {
 
 // ===== 寄り道データ =====
 const yorimichi = {
+  // 最寄駅一覧
+  stations: [
+    { id: "omika", name: "大甕駅", line: "常磐線" }
+  ],
+
   // 効能タイプ
   effects: {
     recovery: { name: "気分の再起動", emoji: "🔄", color: "#34C759" },
@@ -523,6 +528,80 @@ const yorimichi = {
       backup: "展示見終わったら→ガーデンプレイス散策",
       highlight: "写真好きの聖地",
       hours: "10:00-18:00"
+    },
+
+    // === 大甕〜日立エリア（平日夜向け） ===
+    {
+      id: "h1",
+      name: "酒菜 いち",
+      type: "izakaya",
+      emoji: "🍶",
+      area: "日立",
+      station: "日立駅",
+      line: "常磐線",
+      homeStation: "omika",
+      zure: "safe",
+      effects: ["recovery", "connection"],
+      stayTime: 90,
+      walkFromStation: 3,
+      budget: "3000円",
+      soloFriendly: 4,
+      crowdLevel: 2,
+      noiseLevel: 2,
+      reservation: 0,
+      cashOnly: false,
+      reason: "地元の魚と日本酒が旨い。カウンター席で1人飲みに最適",
+      backup: "満席なら→駅前の養老乃瀧",
+      highlight: "地魚と地酒の店",
+      hours: "17:00-23:00"
+    },
+    {
+      id: "h2",
+      name: "シーバーズカフェ",
+      type: "cafe",
+      emoji: "☕",
+      area: "日立",
+      station: "日立駅",
+      line: "常磐線",
+      homeStation: "omika",
+      zure: "safe",
+      effects: ["recovery"],
+      stayTime: 60,
+      walkFromStation: 1,
+      budget: "800円",
+      soloFriendly: 5,
+      crowdLevel: 2,
+      noiseLevel: 1,
+      reservation: 0,
+      cashOnly: false,
+      reason: "日立駅直結のガラス張りカフェ。海を見ながらコーヒー",
+      backup: "混んでたら→駅構内のNEWDAYS横ベンチ",
+      highlight: "絶景の駅カフェ",
+      hours: "7:00-21:00"
+    },
+    {
+      id: "h3",
+      name: "麺屋 五鉄",
+      type: "ramen",
+      emoji: "🍜",
+      area: "大甕",
+      station: "大甕駅",
+      line: "常磐線",
+      homeStation: "omika",
+      zure: "safe",
+      effects: ["recovery"],
+      stayTime: 30,
+      walkFromStation: 5,
+      budget: "900円",
+      soloFriendly: 5,
+      crowdLevel: 3,
+      noiseLevel: 2,
+      reservation: 0,
+      cashOnly: false,
+      reason: "濃厚魚介豚骨。仕事帰りにサクッと寄れる",
+      backup: "行列なら→近くの幸楽苑",
+      highlight: "地元で人気のラーメン",
+      hours: "11:00-22:00"
     }
   ]
 };
@@ -1652,6 +1731,7 @@ export default function Detour() {
 
   // 寄り道用state
   const [yorimichiInput, setYorimichiInput] = useState({
+    homeStation: 'omika', // 最寄駅
     time: 60,        // 60/90/120分
     range: 'walk',   // walk/1station/2station
     zure: 'safe',    // safe/change/adventure
@@ -1743,9 +1823,18 @@ export default function Detour() {
 
   // ===== 寄り道用ロジック =====
   const getYorimichiSpots = () => {
-    const { time, range: _range, zure, ngQueue, ngNoisy, ngCash } = yorimichiInput;
+    const { homeStation, time, range: _range, zure, ngQueue, ngNoisy, ngCash } = yorimichiInput;
 
     let spots = [...yorimichi.spots];
+
+    // 最寄駅でフィルタリング
+    if (homeStation === 'omika') {
+      // 大甕駅の場合は大甕〜日立エリアのスポットのみ
+      spots = spots.filter(s => s.homeStation === 'omika');
+    } else {
+      // それ以外は東京エリア（homeStationがないスポット）
+      spots = spots.filter(s => !s.homeStation);
+    }
 
     // ズレレベルでフィルタリング
     if (zure === 'safe') {
@@ -2271,6 +2360,29 @@ export default function Detour() {
             {/* Header */}
             <div className={`mb-10 transition-all duration-700 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <h1 className="text-[28px] font-bold text-[#1D1D1F]">どこに寄る？</h1>
+            </div>
+
+            {/* Station Selection */}
+            <div className={`mb-8 transition-all duration-700 delay-50 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+              <p className="text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-4">最寄駅</p>
+              <div className="flex gap-3">
+                {yorimichi.stations.map((st) => (
+                  <button
+                    key={st.id}
+                    onClick={() => setYorimichiInput(prev => ({ ...prev, homeStation: st.id }))}
+                    className="flex-1 py-4 px-4 rounded-xl text-[15px] font-semibold transition-all duration-300"
+                    style={{
+                      backgroundColor: yorimichiInput.homeStation === st.id ? '#1D1D1F' : '#FFFFFF',
+                      color: yorimichiInput.homeStation === st.id ? '#FFFFFF' : '#1D1D1F',
+                      border: yorimichiInput.homeStation === st.id ? 'none' : '1px solid #E5E5E7',
+                      boxShadow: yorimichiInput.homeStation !== st.id ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+                    }}
+                  >
+                    <div>{st.name}</div>
+                    <div className="text-[11px] opacity-60 mt-1">{st.line}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Time Selection */}
