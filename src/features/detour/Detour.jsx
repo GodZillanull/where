@@ -28,6 +28,40 @@ export default function Detour() {
   const [yorimichiInput, setYorimichiInput] = useState({ ...DEFAULT_YORIMICHI_INPUT });
   const [yorimichiResults, setYorimichiResults] = useState([]);
   const [selectedYorimichi, setSelectedYorimichi] = useState(null);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+  // 現在地から最寄り駅を取得
+  const getNearestStation = async () => {
+    if (!navigator.geolocation) {
+      alert('お使いのブラウザは位置情報に対応していません');
+      return;
+    }
+    setIsGettingLocation(true);
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        });
+      });
+      const { latitude, longitude } = position.coords;
+      // HeartRails Express APIで最寄り駅を取得
+      const res = await fetch(
+        `https://express.heartrails.com/api/json?method=getStations&x=${longitude}&y=${latitude}`
+      );
+      const data = await res.json();
+      if (data.response?.station?.[0]) {
+        const station = data.response.station[0];
+        setYorimichiInput(prev => ({ ...prev, homeStation: station.name }));
+      } else {
+        alert('最寄り駅が見つかりませんでした');
+      }
+    } catch (error) {
+      alert('位置情報の取得に失敗しました');
+    } finally {
+      setIsGettingLocation(false);
+    }
+  };
   const [showYorimichiGo, setShowYorimichiGo] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [showMehReasons, setShowMehReasons] = useState(false); // 微妙理由選択表示
@@ -584,14 +618,24 @@ export default function Detour() {
             {/* Station Selection */}
             <div className={`mb-6 transition-all duration-700 delay-50 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <p className="text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-3">最寄駅</p>
-              <input
-                type="text"
-                value={yorimichiInput.homeStation}
-                onChange={(e) => setYorimichiInput(prev => ({ ...prev, homeStation: e.target.value }))}
-                placeholder="例: 大甕駅"
-                className="w-full px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300"
-                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={yorimichiInput.homeStation}
+                  onChange={(e) => setYorimichiInput(prev => ({ ...prev, homeStation: e.target.value }))}
+                  placeholder="例: 大甕駅"
+                  className="flex-1 px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300"
+                  style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                />
+                <button
+                  type="button"
+                  onClick={getNearestStation}
+                  disabled={isGettingLocation}
+                  className="px-4 py-3 rounded-xl text-[14px] font-medium bg-[#1D1D1F] text-white transition-all duration-300 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isGettingLocation ? '取得中...' : '現在地'}
+                </button>
+              </div>
             </div>
 
             {/* Time Selection */}
