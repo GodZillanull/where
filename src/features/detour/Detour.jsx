@@ -584,23 +584,14 @@ export default function Detour() {
             {/* Station Selection */}
             <div className={`mb-6 transition-all duration-700 delay-50 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <p className="text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-3">最寄駅</p>
-              <div className="flex flex-wrap gap-2">
-                {yorimichi.stations.map((st) => (
-                  <button
-                    key={st.id}
-                    onClick={() => setYorimichiInput(prev => ({ ...prev, homeStation: st.id }))}
-                    className="px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-300"
-                    style={{
-                      backgroundColor: yorimichiInput.homeStation === st.id ? '#1D1D1F' : '#FFFFFF',
-                      color: yorimichiInput.homeStation === st.id ? '#FFFFFF' : '#1D1D1F',
-                      border: yorimichiInput.homeStation === st.id ? 'none' : '1px solid #E5E5E7',
-                      boxShadow: yorimichiInput.homeStation !== st.id ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
-                    }}
-                  >
-                    {st.name}
-                  </button>
-                ))}
-              </div>
+              <input
+                type="text"
+                value={yorimichiInput.homeStation}
+                onChange={(e) => setYorimichiInput(prev => ({ ...prev, homeStation: e.target.value }))}
+                placeholder="例: 大甕駅"
+                className="w-full px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300"
+                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+              />
             </div>
 
             {/* Time Selection */}
