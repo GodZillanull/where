@@ -2363,14 +2363,14 @@ export default function Detour() {
             </div>
 
             {/* Station Selection */}
-            <div className={`mb-8 transition-all duration-700 delay-50 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-              <p className="text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-4">最寄駅</p>
-              <div className="flex gap-3">
+            <div className={`mb-6 transition-all duration-700 delay-50 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+              <p className="text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-3">最寄駅</p>
+              <div className="flex flex-wrap gap-2">
                 {yorimichi.stations.map((st) => (
                   <button
                     key={st.id}
                     onClick={() => setYorimichiInput(prev => ({ ...prev, homeStation: st.id }))}
-                    className="flex-1 py-4 px-4 rounded-xl text-[15px] font-semibold transition-all duration-300"
+                    className="px-4 py-2 rounded-full text-[13px] font-medium transition-all duration-300"
                     style={{
                       backgroundColor: yorimichiInput.homeStation === st.id ? '#1D1D1F' : '#FFFFFF',
                       color: yorimichiInput.homeStation === st.id ? '#FFFFFF' : '#1D1D1F',
@@ -2378,8 +2378,7 @@ export default function Detour() {
                       boxShadow: yorimichiInput.homeStation !== st.id ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
                     }}
                   >
-                    <div>{st.name}</div>
-                    <div className="text-[11px] opacity-60 mt-1">{st.line}</div>
+                    {st.name}
                   </button>
                 ))}
               </div>
