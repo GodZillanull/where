@@ -3,6 +3,7 @@
 import { Analytics } from '../../services/analytics';
 import { yorimichi } from '../../data/yorimichiData';
 import { plans, questions, typeInfo } from '../../data/weekendData';
+import { searchStations } from '../../data/stationData';
 import { calcUserType, selectWeekendPlans } from '../../domain/weekendPlanner';
 import { DEFAULT_YORIMICHI_INPUT, selectYorimichiSpots } from '../../domain/yorimichiPlanner';
 
@@ -30,6 +31,28 @@ export default function Detour() {
   const [selectedYorimichi, setSelectedYorimichi] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
+  const [stationSuggestions, setStationSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // 駅名入力時のサジェスト更新
+  const handleStationInput = (value) => {
+    setYorimichiInput(prev => ({ ...prev, homeStation: value }));
+    if (value.length > 0) {
+      const suggestions = searchStations(value, 8);
+      setStationSuggestions(suggestions);
+      setShowSuggestions(suggestions.length > 0);
+    } else {
+      setStationSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // サジェスト選択
+  const selectStation = (station) => {
+    setYorimichiInput(prev => ({ ...prev, homeStation: station }));
+    setShowSuggestions(false);
+    setStationSuggestions([]);
+  };
 
   // 現在地から最寄り駅を取得（JSONP使用）
   const getNearestStation = () => {
@@ -652,16 +675,41 @@ export default function Detour() {
             {/* Station Selection */}
             <div className={`mb-6 transition-all duration-700 delay-50 ease-out ${animate ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
               <p className="text-[12px] font-semibold text-[#86868B] uppercase tracking-wider mb-3">最寄駅</p>
-              {/* 入力欄 */}
-              <input
-                type="text"
-                value={yorimichiInput.homeStation}
-                onChange={(e) => setYorimichiInput(prev => ({ ...prev, homeStation: e.target.value }))}
-                placeholder="駅名を入力"
-                disabled={useCurrentLocation}
-                className="w-full px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300 disabled:bg-[#F5F5F5] disabled:text-[#86868B]"
-                style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
-              />
+              {/* 入力欄 + サジェスト */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={yorimichiInput.homeStation}
+                  onChange={(e) => handleStationInput(e.target.value)}
+                  onFocus={() => {
+                    if (yorimichiInput.homeStation.length > 0) {
+                      const suggestions = searchStations(yorimichiInput.homeStation, 8);
+                      setStationSuggestions(suggestions);
+                      setShowSuggestions(suggestions.length > 0);
+                    }
+                  }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  placeholder="駅名を入力"
+                  disabled={useCurrentLocation}
+                  className="w-full px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300 disabled:bg-[#F5F5F5] disabled:text-[#86868B]"
+                  style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+                />
+                {/* サジェストリスト */}
+                {showSuggestions && stationSuggestions.length > 0 && (
+                  <div className="absolute z-10 w-full mt-1 bg-white rounded-xl border border-[#E5E5E7] shadow-lg overflow-hidden">
+                    {stationSuggestions.map((station, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onMouseDown={() => selectStation(station)}
+                        className="w-full px-4 py-3 text-left text-[15px] hover:bg-[#F5F5F5] transition-colors border-b border-[#F0F0F0] last:border-b-0"
+                      >
+                        🚉 {station}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               {/* 現在地トグル */}
               <div
                 className="flex items-center justify-between mt-3 p-4 rounded-xl bg-[#E8F5E9] cursor-pointer transition-all duration-300"
