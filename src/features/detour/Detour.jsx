@@ -30,9 +30,9 @@ export default function Detour() {
   const [yorimichiResults, setYorimichiResults] = useState([]);
   const [selectedYorimichi, setSelectedYorimichi] = useState(null);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [useCurrentLocation, setUseCurrentLocation] = useState(false);
   const [stationSuggestions, setStationSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isStationInputFocused, setIsStationInputFocused] = useState(false);
 
   // 駅名入力時のサジェスト更新
   const handleStationInput = (value) => {
@@ -40,11 +40,10 @@ export default function Detour() {
     if (value.length > 0) {
       const suggestions = searchStations(value, 8);
       setStationSuggestions(suggestions);
-      setShowSuggestions(suggestions.length > 0);
     } else {
       setStationSuggestions([]);
-      setShowSuggestions(false);
     }
+    setShowSuggestions(true);
   };
 
   // サジェスト選択
@@ -52,6 +51,14 @@ export default function Detour() {
     setYorimichiInput(prev => ({ ...prev, homeStation: station }));
     setShowSuggestions(false);
     setStationSuggestions([]);
+    setIsStationInputFocused(false);
+  };
+
+  // 現在地から駅を取得してサジェストを閉じる
+  const handleCurrentLocationSelect = () => {
+    setShowSuggestions(false);
+    setIsStationInputFocused(false);
+    getNearestStation();
   };
 
   // 現在地から最寄り駅を取得（JSONP使用）
@@ -92,7 +99,6 @@ export default function Detour() {
       },
       (error) => {
         setIsGettingLocation(false);
-        setUseCurrentLocation(false);
         if (error.code === error.PERMISSION_DENIED) {
           const openSettings = confirm(
             '位置情報の使用が許可されていません。\n\n' +
@@ -113,12 +119,6 @@ export default function Detour() {
     );
   };
 
-  // 現在地トグルが変更されたとき
-  useEffect(() => {
-    if (useCurrentLocation) {
-      getNearestStation();
-    }
-  }, [useCurrentLocation]);
   const [showYorimichiGo, setShowYorimichiGo] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [showMehReasons, setShowMehReasons] = useState(false); // 微妙理由選択表示
@@ -682,21 +682,37 @@ export default function Detour() {
                   value={yorimichiInput.homeStation}
                   onChange={(e) => handleStationInput(e.target.value)}
                   onFocus={() => {
+                    setIsStationInputFocused(true);
+                    setShowSuggestions(true);
                     if (yorimichiInput.homeStation.length > 0) {
                       const suggestions = searchStations(yorimichiInput.homeStation, 8);
                       setStationSuggestions(suggestions);
-                      setShowSuggestions(suggestions.length > 0);
                     }
                   }}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onBlur={() => setTimeout(() => {
+                    setShowSuggestions(false);
+                    setIsStationInputFocused(false);
+                  }, 200)}
                   placeholder="駅名を入力"
-                  disabled={useCurrentLocation}
+                  disabled={isGettingLocation}
                   className="w-full px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300 disabled:bg-[#F5F5F5] disabled:text-[#86868B]"
                   style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
                 />
                 {/* サジェストリスト */}
-                {showSuggestions && stationSuggestions.length > 0 && (
-                  <div className="absolute z-10 w-full mt-1 bg-white rounded-xl border border-[#E5E5E7] shadow-lg overflow-hidden">
+                {showSuggestions && isStationInputFocused && (
+                  <div className="absolute z-10 w-full mt-1 bg-white rounded-xl border border-[#E5E5E7] shadow-lg overflow-hidden max-h-80 overflow-y-auto">
+                    {/* 現在地周辺から探す - 常に一番上に表示 */}
+                    <button
+                      type="button"
+                      onMouseDown={handleCurrentLocationSelect}
+                      className="w-full px-4 py-3 text-left text-[15px] hover:bg-[#E8F5E9] transition-colors border-b border-[#F0F0F0] flex items-center gap-3"
+                    >
+                      <span className="text-[18px]">📍</span>
+                      <span className="text-[#2E7D32] font-medium">
+                        {isGettingLocation ? '現在地を取得中...' : '現在地周辺から探す'}
+                      </span>
+                    </button>
+                    {/* 駅サジェスト */}
                     {stationSuggestions.map((station, index) => (
                       <button
                         key={index}
@@ -709,25 +725,6 @@ export default function Detour() {
                     ))}
                   </div>
                 )}
-              </div>
-              {/* 現在地トグル */}
-              <div
-                className="flex items-center justify-between mt-3 p-4 rounded-xl bg-[#E8F5E9] cursor-pointer transition-all duration-300"
-                onClick={() => setUseCurrentLocation(!useCurrentLocation)}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-[20px]">📍</span>
-                  <span className="text-[14px] font-medium text-[#2E7D32]">
-                    {isGettingLocation ? '現在地を取得中...' : '現在地周辺から探す'}
-                  </span>
-                </div>
-                <div
-                  className={`w-12 h-7 rounded-full transition-all duration-300 ${useCurrentLocation ? 'bg-[#4CAF50]' : 'bg-[#E0E0E0]'}`}
-                >
-                  <div
-                    className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-all duration-300 mt-0.5 ${useCurrentLocation ? 'translate-x-5.5 ml-0.5' : 'translate-x-0.5'}`}
-                  />
-                </div>
               </div>
             </div>
 
