@@ -6,6 +6,7 @@ import { plans, questions, typeInfo } from '../../data/weekendData';
 import { searchStations } from '../../data/stationData';
 import { calcUserType, selectWeekendPlans } from '../../domain/weekendPlanner';
 import { DEFAULT_YORIMICHI_INPUT, selectYorimichiSpots } from '../../domain/yorimichiPlanner';
+import { getStationLatLng, suggestByLocation, convertToYorimichiSpots } from '../../services/placesApi';
 
 // ===== MAIN APP =====
 export default function Detour({ onSuggest }) {
@@ -186,8 +187,42 @@ export default function Detour({ onSuggest }) {
   };
 
   // ===== 寄り道用ロジック =====
-  const submitYorimichi = () => {
-    const spots = selectYorimichiSpots(yorimichiInput, yorimichi);
+  const submitYorimichi = async () => {
+    // まずハードコードデータから検索
+    let spots = selectYorimichiSpots(yorimichiInput, yorimichi);
+
+    // 3件未満の場合、Places API で補完
+    if (spots.length < 3 && yorimichiInput.homeStation) {
+      try {
+        const coords = await getStationLatLng(yorimichiInput.homeStation);
+        if (coords) {
+          const data = await suggestByLocation(coords.lat, coords.lng, 800);
+          if (data.items && data.items.length > 0) {
+            const apiSpots = convertToYorimichiSpots(data.items, yorimichiInput.homeStation + '駅');
+            // ハードコードで足りない zure スロットを API で補完
+            const existingZures = new Set(spots.map(s => s.zure));
+            for (const apiSpot of apiSpots) {
+              if (spots.length >= 3) break;
+              if (!existingZures.has(apiSpot.zure)) {
+                spots.push(apiSpot);
+                existingZures.add(apiSpot.zure);
+              }
+            }
+            // まだ3件未満なら残りも追加
+            for (const apiSpot of apiSpots) {
+              if (spots.length >= 3) break;
+              if (!spots.find(s => s.id === apiSpot.id)) {
+                spots.push(apiSpot);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Places API 補完失敗:', err.message);
+        // API失敗してもハードコードデータで続行
+      }
+    }
+
     setYorimichiResults(spots);
     setScreen('yorimichi-result');
     setAnimate(false);
@@ -971,11 +1006,10 @@ export default function Detour({ onSuggest }) {
 
                 {/* 別の候補 */}
                 <button
-                  onClick={() => {
-                    const newSpots = selectYorimichiSpots(yorimichiInput, yorimichi);
-                    setYorimichiResults(newSpots);
+                  onClick={async () => {
                     setShowOthers(false);
                     setAnimate(false);
+                    await submitYorimichi();
                     setTimeout(() => setAnimate(true), 50);
                   }}
                   className="w-full mt-6 py-3 text-[15px] font-medium text-[#007AFF] transition-all duration-300 active:opacity-60"
@@ -1047,14 +1081,25 @@ export default function Detour({ onSuggest }) {
                   >
                     {typeLabel}
                   </span>
+                  {spot.fromPlacesApi && (
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF]">
+                      Google Places
+                    </span>
+                  )}
                 </div>
 
-                <p
-                  className="text-[17px] leading-relaxed font-medium"
-                  style={{ color: typeColor.text }}
-                >
-                  「{spot.reason}」
-                </p>
+                {spot.reason ? (
+                  <p
+                    className="text-[17px] leading-relaxed font-medium"
+                    style={{ color: typeColor.text }}
+                  >
+                    「{spot.reason}」
+                  </p>
+                ) : (
+                  <p className="text-[15px] text-[#86868B]">
+                    {spot.highlight || spot.area}
+                  </p>
+                )}
               </div>
 
               {/* 店名 */}
@@ -1075,7 +1120,7 @@ export default function Detour({ onSuggest }) {
                   写真を見る
                 </button>
                 <button
-                  onClick={() => openUrl(`https://www.google.com/maps/search/${encodeURIComponent(spot.name + ' ' + spot.area)}`)}
+                  onClick={() => openUrl(spot.mapsUrl || `https://www.google.com/maps/search/${encodeURIComponent(spot.name + ' ' + spot.area)}`)}
                   className="transition-all active:opacity-60"
                   style={{ color: typeColor.main }}
                 >
