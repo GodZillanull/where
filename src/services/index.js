@@ -94,6 +94,42 @@ export {
 } from './ticketsService';
 
 // ========================================
+// Events - イベント・展示（時限性コンテンツ）
+// ========================================
+export {
+  EVENT_TYPES,
+  EVENT_CATEGORIES,
+  addEvent,
+  getActiveEvents,
+  getWeekendEvents,
+  getEndingSoonEvents,
+  getExhibitions,
+  getSeasonalEvents,
+  getEventById,
+  getEventsByTag,
+  updateEventStatuses,
+} from './eventsService';
+
+// ========================================
+// Venues - 美術館・公園・施設（常設スポット）
+// ========================================
+export {
+  VENUE_TYPES,
+  VENUE_SUBTYPES,
+  addVenue,
+  getMuseums,
+  getGalleries,
+  getParks,
+  getRainyDayVenues,
+  getFreeVenues,
+  getVenueById,
+  getVenuesByArea,
+  getOpenNowVenues,
+  getVenuesByTag,
+  updateVenue,
+} from './venuesService';
+
+// ========================================
 // Legacy Analytics（後方互換）
 // ========================================
 export {
