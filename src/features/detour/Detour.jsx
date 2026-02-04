@@ -8,7 +8,7 @@ import { calcUserType, selectWeekendPlans } from '../../domain/weekendPlanner';
 import { DEFAULT_YORIMICHI_INPUT, selectYorimichiSpots } from '../../domain/yorimichiPlanner';
 
 // ===== MAIN APP =====
-export default function Detour() {
+export default function Detour({ onSuggest }) {
   // 共通state
   const [screen, setScreen] = useState('home');
   const [_mode, setMode] = useState(null); // 'weekend' or 'yorimichi'
@@ -578,6 +578,19 @@ export default function Detour() {
                 5つの質問で、あなたに合うプランを提案
               </p>
             </button>
+
+            {/* Google Places検索（サジェスト） */}
+            {onSuggest && (
+              <button
+                onClick={onSuggest}
+                className="w-full text-left p-6 rounded-2xl transition-all duration-300 ease-out active:scale-[0.98] bg-[#1C1C1E] border border-[#2C2C2E]"
+              >
+                <h2 className="text-[20px] font-bold text-white mb-2">周辺スポット検索</h2>
+                <p className="text-[14px] text-[#8E8E93] leading-relaxed">
+                  Google Placesで今いる場所の近くを探す
+                </p>
+              </button>
+            )}
           </div>
         </div>
       </div>
