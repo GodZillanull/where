@@ -142,18 +142,36 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { station, radius = 800 } = req.body || {};
+    const { station, lat, lng, radius = 800 } = req.body || {};
 
-    // バリデーション
-    if (!station || !STATIONS[station]) {
+    // 座標を決定: lat/lng 直接指定 or 駅ID
+    let latitude, longitude;
+    let stationName = '指定地点';
+
+    if (lat != null && lng != null) {
+      // lat/lng 直接指定
+      latitude = Number(lat);
+      longitude = Number(lng);
+      if (isNaN(latitude) || isNaN(longitude)) {
+        return res.status(400).json({ error: 'Invalid lat/lng' });
+      }
+      if (station && STATIONS[station]) {
+        stationName = STATIONS[station].name;
+      }
+    } else if (station && STATIONS[station]) {
+      // 駅ID指定
+      const stationData = STATIONS[station];
+      latitude = stationData.lat;
+      longitude = stationData.lng;
+      stationName = stationData.name;
+    } else {
       return res.status(400).json({
-        error: 'Invalid station',
+        error: 'station ID or lat/lng required',
         validStations: Object.keys(STATIONS)
       });
     }
 
     const radiusNum = Math.min(Math.max(Number(radius) || 800, 100), 2000);
-    const stationData = STATIONS[station];
 
     // Google Places API キー
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
@@ -178,8 +196,8 @@ export default async function handler(req, res) {
         locationRestriction: {
           circle: {
             center: {
-              latitude: stationData.lat,
-              longitude: stationData.lng,
+              latitude,
+              longitude,
             },
             radius: radiusNum,
           },
@@ -211,7 +229,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       items,
-      station: stationData.name,
+      station: stationName,
       radius: radiusNum,
       totalFound: places.length,
     });
