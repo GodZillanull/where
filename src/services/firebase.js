@@ -12,10 +12,23 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-// Firebase初期化
-const app = initializeApp(firebaseConfig);
+// Firebase環境変数が設定されているかチェック
+export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
 
-// Firestore
-export const db = getFirestore(app);
+// Firebase初期化（設定がない場合はnull）
+let app = null;
+let db = null;
 
+if (isFirebaseConfigured) {
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+  } catch (error) {
+    console.warn('Firebase初期化失敗:', error.message);
+  }
+} else {
+  console.warn('Firebase環境変数が未設定です。Firebase機能は無効です。');
+}
+
+export { db };
 export default app;
