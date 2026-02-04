@@ -3,7 +3,7 @@
  *
  * 駅選択 → 提案ボタン → 3枚カード表示 → Google Maps遷移
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   AVAILABLE_STATIONS,
   AVAILABLE_RADII,
@@ -21,6 +21,33 @@ export default function PlacesSuggest({ onBack }) {
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+
+  // 接続ステータス: 'checking' | 'ok' | 'error'
+  const [apiStatus, setApiStatus] = useState('checking');
+  const [apiError, setApiError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function checkHealth() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.env_key_set && data.places_api_reachable) {
+          setApiStatus('ok');
+        } else {
+          setApiStatus('error');
+          setApiError(data.error || 'API接続に失敗しました');
+        }
+      } catch {
+        if (cancelled) return;
+        setApiStatus('error');
+        setApiError('ヘルスチェックに接続できません');
+      }
+    }
+    checkHealth();
+    return () => { cancelled = true; };
+  }, []);
 
   // 提案を取得
   const handleSuggest = async (isReroll = false) => {
@@ -74,6 +101,33 @@ export default function PlacesSuggest({ onBack }) {
             <p className="text-[14px] text-[#86868B] mt-2">
               Google Places APIで周辺のスポットを探します
             </p>
+
+            {/* 接続ステータス */}
+            <div className="mt-3">
+              {apiStatus === 'checking' && (
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium bg-[#F5F5F7] text-[#86868B]">
+                  <span className="w-2 h-2 rounded-full bg-[#86868B] animate-pulse" />
+                  API接続を確認中...
+                </span>
+              )}
+              {apiStatus === 'ok' && (
+                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium bg-[#E8F5E9] text-[#2E7D32]">
+                  <span className="w-2 h-2 rounded-full bg-[#34C759]" />
+                  Google Places API 接続済み
+                </span>
+              )}
+              {apiStatus === 'error' && (
+                <div>
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[12px] font-medium bg-[#FFF0F0] text-[#FF3B30]">
+                    <span className="w-2 h-2 rounded-full bg-[#FF3B30]" />
+                    API接続エラー
+                  </span>
+                  {apiError && (
+                    <p className="text-[12px] text-[#FF3B30] mt-2">{apiError}</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Station Selection */}
