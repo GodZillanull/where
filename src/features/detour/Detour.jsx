@@ -33,6 +33,7 @@ export default function Detour() {
   const [useCurrentLocation, setUseCurrentLocation] = useState(false);
   const [stationSuggestions, setStationSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isStationInputFocused, setIsStationInputFocused] = useState(false);
 
   // 駅名入力時のサジェスト更新
   const handleStationInput = (value) => {
@@ -682,13 +683,17 @@ export default function Detour() {
                   value={yorimichiInput.homeStation}
                   onChange={(e) => handleStationInput(e.target.value)}
                   onFocus={() => {
+                    setIsStationInputFocused(true);
                     if (yorimichiInput.homeStation.length > 0) {
                       const suggestions = searchStations(yorimichiInput.homeStation, 8);
                       setStationSuggestions(suggestions);
                       setShowSuggestions(suggestions.length > 0);
                     }
                   }}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                  onBlur={() => setTimeout(() => {
+                    setShowSuggestions(false);
+                    setIsStationInputFocused(false);
+                  }, 200)}
                   placeholder="駅名を入力"
                   disabled={useCurrentLocation}
                   className="w-full px-4 py-3 rounded-xl text-[15px] bg-white border border-[#E5E5E7] focus:outline-none focus:ring-2 focus:ring-[#1D1D1F] transition-all duration-300 disabled:bg-[#F5F5F5] disabled:text-[#86868B]"
@@ -710,25 +715,27 @@ export default function Detour() {
                   </div>
                 )}
               </div>
-              {/* 現在地トグル */}
-              <div
-                className="flex items-center justify-between mt-3 p-4 rounded-xl bg-[#E8F5E9] cursor-pointer transition-all duration-300"
-                onClick={() => setUseCurrentLocation(!useCurrentLocation)}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-[20px]">📍</span>
-                  <span className="text-[14px] font-medium text-[#2E7D32]">
-                    {isGettingLocation ? '現在地を取得中...' : '現在地周辺から探す'}
-                  </span>
-                </div>
+              {/* 現在地トグル（フォーカス時 or 現在地ON時に表示） */}
+              {(isStationInputFocused || useCurrentLocation || isGettingLocation) && (
                 <div
-                  className={`w-12 h-7 rounded-full transition-all duration-300 ${useCurrentLocation ? 'bg-[#4CAF50]' : 'bg-[#E0E0E0]'}`}
+                  className="flex items-center justify-between mt-3 p-4 rounded-xl bg-[#E8F5E9] cursor-pointer transition-all duration-300"
+                  onMouseDown={() => setUseCurrentLocation(!useCurrentLocation)}
                 >
+                  <div className="flex items-center gap-3">
+                    <span className="text-[20px]">📍</span>
+                    <span className="text-[14px] font-medium text-[#2E7D32]">
+                      {isGettingLocation ? '現在地を取得中...' : '現在地周辺から探す'}
+                    </span>
+                  </div>
                   <div
-                    className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-all duration-300 mt-0.5 ${useCurrentLocation ? 'translate-x-5.5 ml-0.5' : 'translate-x-0.5'}`}
-                  />
+                    className={`w-12 h-7 rounded-full transition-all duration-300 ${useCurrentLocation ? 'bg-[#4CAF50]' : 'bg-[#E0E0E0]'}`}
+                  >
+                    <div
+                      className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-all duration-300 mt-0.5 ${useCurrentLocation ? 'translate-x-5.5 ml-0.5' : 'translate-x-0.5'}`}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Time Selection */}
