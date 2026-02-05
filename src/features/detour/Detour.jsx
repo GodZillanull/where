@@ -188,38 +188,32 @@ export default function Detour({ onSuggest }) {
 
   // ===== 寄り道用ロジック =====
   const submitYorimichi = async () => {
-    // まずハードコードデータから検索
-    let spots = selectYorimichiSpots(yorimichiInput, yorimichi);
+    const stationName = yorimichiInput.homeStation;
+    let spots = [];
 
-    // 3件未満の場合、Places API で補完
-    if (spots.length < 3 && yorimichiInput.homeStation) {
+    // 1. Places API で駅周辺を検索（主データ）
+    if (stationName) {
       try {
-        const coords = await getStationLatLng(yorimichiInput.homeStation);
+        const coords = await getStationLatLng(stationName);
         if (coords) {
           const data = await suggestByLocation(coords.lat, coords.lng, 800);
           if (data.items && data.items.length > 0) {
-            const apiSpots = convertToYorimichiSpots(data.items, yorimichiInput.homeStation + '駅');
-            // ハードコードで足りない zure スロットを API で補完
-            const existingZures = new Set(spots.map(s => s.zure));
-            for (const apiSpot of apiSpots) {
-              if (spots.length >= 3) break;
-              if (!existingZures.has(apiSpot.zure)) {
-                spots.push(apiSpot);
-                existingZures.add(apiSpot.zure);
-              }
-            }
-            // まだ3件未満なら残りも追加
-            for (const apiSpot of apiSpots) {
-              if (spots.length >= 3) break;
-              if (!spots.find(s => s.id === apiSpot.id)) {
-                spots.push(apiSpot);
-              }
-            }
+            spots = convertToYorimichiSpots(data.items, stationName + '駅');
           }
         }
       } catch (err) {
-        console.warn('Places API 補完失敗:', err.message);
-        // API失敗してもハードコードデータで続行
+        console.warn('Places API 取得失敗:', err.message);
+      }
+    }
+
+    // 2. API で足りなければハードコードデータで補完
+    if (spots.length < 3) {
+      const hardcoded = selectYorimichiSpots(yorimichiInput, yorimichi);
+      for (const hc of hardcoded) {
+        if (spots.length >= 3) break;
+        if (!spots.find(s => s.name === hc.name)) {
+          spots.push(hc);
+        }
       }
     }
 
