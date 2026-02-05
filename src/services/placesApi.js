@@ -45,13 +45,13 @@ export const SLOT_INFO = {
  * @param {number} radius - 検索半径 (m)
  * @returns {Promise<{items: Array, station: string, radius: number, totalFound: number}>}
  */
-export async function suggestPlaces(station, radius = 800) {
+export async function suggestPlaces(station, radius = 800, excludeChains = true) {
   const response = await fetch('/api/suggest', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ station, radius }),
+    body: JSON.stringify({ station, radius, excludeChains }),
   });
 
   if (!response.ok) {
@@ -74,11 +74,11 @@ export async function suggestPlaces(station, radius = 800) {
  * @param {number} radius - 検索半径 (m)
  * @returns {Promise<{items: Array}>}
  */
-export async function suggestByLocation(lat, lng, radius = 800) {
+export async function suggestByLocation(lat, lng, radius = 800, excludeChains = true) {
   const response = await fetch('/api/suggest', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ lat, lng, radius }),
+    body: JSON.stringify({ lat, lng, radius, excludeChains }),
   });
 
   if (!response.ok) {
@@ -164,6 +164,7 @@ export function convertToYorimichiSpots(items, stationName) {
       hours: '',
       mapsUrl: item.mapsUrl || '',
       fromPlacesApi: true, // API経由フラグ
+      isChain: item.isChain || false,
     };
   });
 }

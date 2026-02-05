@@ -21,6 +21,7 @@ export default function PlacesSuggest({ onBack }) {
   const [error, setError] = useState(null);
   const [results, setResults] = useState(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [excludeChains, setExcludeChains] = useState(true);
 
   // 接続ステータス: 'checking' | 'ok' | 'error'
   const [apiStatus, setApiStatus] = useState('checking');
@@ -61,7 +62,7 @@ export default function PlacesSuggest({ onBack }) {
     setError(null);
 
     try {
-      const data = await suggestPlaces(station, radius);
+      const data = await suggestPlaces(station, radius, excludeChains);
       setResults(data);
       setHasSearched(true);
 
@@ -177,6 +178,28 @@ export default function PlacesSuggest({ onBack }) {
             </div>
           </div>
 
+          {/* Chain Exclusion Toggle */}
+          <div className="mb-8">
+            <button
+              onClick={() => setExcludeChains(!excludeChains)}
+              className="flex items-center justify-between w-full p-4 bg-white rounded-xl transition-all duration-300"
+              style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+            >
+              <span className="text-[14px] font-medium text-[#1D1D1F]">
+                チェーン店を除外
+              </span>
+              <div
+                className="w-12 h-7 rounded-full transition-all duration-300 flex items-center px-0.5"
+                style={{ backgroundColor: excludeChains ? '#34C759' : '#E5E5EA' }}
+              >
+                <div
+                  className="w-6 h-6 bg-white rounded-full shadow transition-transform duration-300"
+                  style={{ transform: excludeChains ? 'translateX(20px)' : 'translateX(0)' }}
+                />
+              </div>
+            </button>
+          </div>
+
           {/* Submit Button */}
           <button
             onClick={() => handleSuggest(false)}
@@ -229,6 +252,11 @@ export default function PlacesSuggest({ onBack }) {
                           >
                             {slotInfo.emoji} {slotInfo.name}
                           </span>
+                          {item.isChain && (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#FF9500]/15 text-[#FF9500]">
+                              チェーン
+                            </span>
+                          )}
                           <span className="text-[12px] text-[#86868B]">
                             {slotInfo.description}
                           </span>

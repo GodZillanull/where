@@ -106,6 +106,37 @@ describe('/api/suggest: 課金地雷回避', () => {
   });
 });
 
+describe('/api/suggest: チェーン除外 + DISTANCE', () => {
+  it('CHAIN_KEYWORDS リストが定義されていること', () => {
+    expect(apiSuggestCode).toMatch(/CHAIN_KEYWORDS/);
+    expect(apiSuggestCode).toMatch(/サイゼリヤ/);
+    expect(apiSuggestCode).toMatch(/マクドナルド/);
+    expect(apiSuggestCode).toMatch(/スターバックス/);
+  });
+
+  it('isChainStore 関数が存在すること', () => {
+    expect(apiSuggestCode).toMatch(/function isChainStore/);
+  });
+
+  it('excludeChains パラメータを受け取ること', () => {
+    expect(apiSuggestCode).toMatch(/excludeChains/);
+  });
+
+  it('rankPreference が DISTANCE であること', () => {
+    expect(apiSuggestCode).toMatch(/rankPreference.*DISTANCE/);
+    expect(apiSuggestCode).not.toMatch(/rankPreference.*POPULARITY/);
+  });
+
+  it('レスポンスに isChain フラグが含まれること', () => {
+    expect(apiSuggestCode).toMatch(/isChain/);
+  });
+
+  it('assignSlots 関数がスロット割り当てを行うこと', () => {
+    expect(apiSuggestCode).toMatch(/function assignSlots/);
+    expect(apiSuggestCode).toMatch(/safe.*change.*adventure/);
+  });
+});
+
 describe('/api/suggest: レート制限', () => {
   // checkRateLimit 関数をテスト用に抽出
   // 実際のコードから関数をコピーしてテスト

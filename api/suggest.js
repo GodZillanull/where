@@ -14,6 +14,20 @@ const STATIONS = {
   hamamatsu: { name: '浜松駅', lat: 34.703897, lng: 137.734121 },
 };
 
+// チェーン店キーワード（店名の部分一致で判定）
+const CHAIN_KEYWORDS = [
+  'サイゼリヤ','マクドナルド','スターバックス','ドトール','コメダ',
+  'ガスト','ジョナサン','すき家','吉野家','松屋','バーガーキング',
+  'モスバーガー','ケンタッキー','丸亀製麺','はなまるうどん','日高屋',
+  '幸楽苑','くら寿司','スシロー','はま寿司','鳥貴族','串カツ田中',
+  '牛角','大戸屋','リンガーハット',
+];
+
+function isChainStore(name) {
+  if (!name) return false;
+  return CHAIN_KEYWORDS.some(kw => name.includes(kw));
+}
+
 // レート制限用インメモリストア（Serverless のため再起動でリセット）
 const rateLimitStore = new Map();
 
@@ -53,57 +67,70 @@ function checkRateLimit(ip) {
   return { allowed: true };
 }
 
-// スロット割り当て（カテゴリベースで safe/change/adventure に分類）
-function assignSlots(places) {
+// カテゴリ分類
+const safeTypes = ['cafe', 'coffee_shop', 'bakery', 'book_store'];
+const changeTypes = ['restaurant', 'ramen_restaurant', 'japanese_restaurant', 'bar'];
+const adventureTypes = ['spa', 'park', 'museum', 'art_gallery', 'movie_theater'];
+
+function categorizePlace(place) {
+  const typeId = (place.primaryType || '').toLowerCase();
+  if (safeTypes.some(t => typeId.includes(t))) return 'safe';
+  if (adventureTypes.some(t => typeId.includes(t))) return 'adventure';
+  return 'change';
+}
+
+// スロット割り当て（チェーン除外対応）
+function assignSlots(places, excludeChains) {
   if (!places || places.length === 0) return [];
 
-  // カテゴリ分類
-  const safeTypes = ['cafe', 'coffee_shop', 'bakery', 'book_store'];
-  const changeTypes = ['restaurant', 'ramen_restaurant', 'japanese_restaurant', 'bar'];
-  const adventureTypes = ['spa', 'park', 'museum', 'art_gallery', 'movie_theater'];
+  // 各プレースにチェーンフラグとカテゴリを付与
+  const tagged = places.map(p => ({
+    ...p,
+    _chain: isChainStore(p.displayName?.text),
+    _category: categorizePlace(p),
+  }));
 
-  const categorized = {
-    safe: [],
-    change: [],
-    adventure: [],
+  const nonChain = tagged.filter(p => !p._chain);
+  const chain = tagged.filter(p => p._chain);
+
+  const result = [];
+  const usedIds = new Set();
+
+  const pickRandom = (arr) => {
+    const available = arr.filter(p => !usedIds.has(p.id));
+    return available.length > 0 ? available[Math.floor(Math.random() * available.length)] : null;
   };
 
-  for (const place of places) {
-    const typeId = place.primaryType || '';
-    const typeLower = typeId.toLowerCase();
+  // 各スロットを埋める
+  for (const slot of ['safe', 'change', 'adventure']) {
+    let pick = null;
 
-    if (safeTypes.some(t => typeLower.includes(t))) {
-      categorized.safe.push(place);
-    } else if (adventureTypes.some(t => typeLower.includes(t))) {
-      categorized.adventure.push(place);
+    if (slot === 'safe') {
+      // safe: まず非チェーンから、なければチェーンOK
+      pick = pickRandom(nonChain.filter(p => p._category === slot))
+          || pickRandom(nonChain)
+          || pickRandom(chain.filter(p => p._category === slot))
+          || pickRandom(chain);
+    } else if (excludeChains) {
+      // change/adventure: チェーン除外ON → 非チェーン優先、足りなければチェーンで埋める
+      pick = pickRandom(nonChain.filter(p => p._category === slot))
+          || pickRandom(nonChain)
+          || pickRandom(chain.filter(p => p._category === slot))
+          || pickRandom(chain);
     } else {
-      categorized.change.push(place);
+      // チェーン除外OFF → 全体から
+      pick = pickRandom(tagged.filter(p => p._category === slot))
+          || pickRandom(tagged);
     }
-  }
 
-  // 各スロットから1件ずつ選択（ランダム）
-  const result = [];
-
-  const pickRandom = (arr) => arr.length > 0 ? arr[Math.floor(Math.random() * arr.length)] : null;
-
-  // safe
-  let safePick = pickRandom(categorized.safe) || pickRandom(places);
-  if (safePick) {
-    result.push({ slot: 'safe', ...formatPlace(safePick) });
-    places = places.filter(p => p.id !== safePick.id);
-  }
-
-  // change
-  let changePick = pickRandom(categorized.change) || pickRandom(places);
-  if (changePick) {
-    result.push({ slot: 'change', ...formatPlace(changePick) });
-    places = places.filter(p => p.id !== changePick.id);
-  }
-
-  // adventure
-  let adventurePick = pickRandom(categorized.adventure) || pickRandom(places);
-  if (adventurePick) {
-    result.push({ slot: 'adventure', ...formatPlace(adventurePick) });
+    if (pick) {
+      usedIds.add(pick.id);
+      result.push({
+        slot,
+        isChain: pick._chain,
+        ...formatPlace(pick),
+      });
+    }
   }
 
   return result;
@@ -115,6 +142,7 @@ function formatPlace(place) {
     id: place.id || '',
     name: place.displayName?.text || '不明',
     typeLabel: place.primaryTypeDisplayName?.text || 'スポット',
+    primaryType: place.primaryType || '',
     address: place.shortFormattedAddress || '',
     mapsUrl: place.googleMapsUri || '',
   };
@@ -142,14 +170,13 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { station, lat, lng, radius = 800 } = req.body || {};
+    const { station, lat, lng, radius = 800, excludeChains = true } = req.body || {};
 
     // 座標を決定: lat/lng 直接指定 or 駅ID
     let latitude, longitude;
     let stationName = '指定地点';
 
     if (lat != null && lng != null) {
-      // lat/lng 直接指定
       latitude = Number(lat);
       longitude = Number(lng);
       if (isNaN(latitude) || isNaN(longitude)) {
@@ -159,7 +186,6 @@ export default async function handler(req, res) {
         stationName = STATIONS[station].name;
       }
     } else if (station && STATIONS[station]) {
-      // 駅ID指定
       const stationData = STATIONS[station];
       latitude = stationData.lat;
       longitude = stationData.lng;
@@ -191,7 +217,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         includedTypes: ['restaurant', 'cafe', 'bar', 'spa', 'park', 'museum', 'book_store'],
         maxResultCount: 20,
-        rankPreference: 'POPULARITY',
+        rankPreference: 'DISTANCE',
         languageCode: 'ja',
         locationRestriction: {
           circle: {
@@ -224,14 +250,15 @@ export default async function handler(req, res) {
       });
     }
 
-    // 3件選んでスロット割り当て
-    const items = assignSlots(places);
+    // 3件選んでスロット割り当て（チェーン除外考慮）
+    const items = assignSlots(places, excludeChains);
 
     return res.status(200).json({
       items,
       station: stationName,
       radius: radiusNum,
       totalFound: places.length,
+      excludeChains,
     });
 
   } catch (error) {
