@@ -67,6 +67,43 @@ function checkRateLimit(ip) {
   return { allowed: true };
 }
 
+// 業種別の営業時間ヒューリスティック（JST, 24h）
+// API課金を避けるためcurrentOpeningHoursは使わず推定で除外
+const TYPE_HOURS = {
+  cafe:                { open: 7,  close: 21 },
+  coffee_shop:         { open: 7,  close: 21 },
+  bakery:              { open: 7,  close: 19 },
+  book_store:          { open: 10, close: 21 },
+  restaurant:          { open: 11, close: 23 },
+  ramen_restaurant:    { open: 11, close: 23 },
+  japanese_restaurant: { open: 11, close: 22 },
+  bar:                 { open: 17, close: 2  },  // 深夜営業
+  spa:                 { open: 10, close: 23 },
+  park:                { open: 0,  close: 24 },  // 終日
+  museum:              { open: 9,  close: 17 },
+  art_gallery:         { open: 10, close: 18 },
+  movie_theater:       { open: 9,  close: 24 },
+};
+
+function isLikelyOpen(primaryType, nowHourJST) {
+  const hours = TYPE_HOURS[(primaryType || '').toLowerCase()];
+  if (!hours) return true; // 不明な業種は除外しない
+
+  if (hours.close > hours.open) {
+    // 通常: open <= now < close
+    return nowHourJST >= hours.open && nowHourJST < hours.close;
+  }
+  // 日付跨ぎ（bar等）: open以降 OR close前
+  return nowHourJST >= hours.open || nowHourJST < hours.close;
+}
+
+function getJSTHour() {
+  const now = new Date();
+  // UTC+9
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+  return jst.getUTCHours();
+}
+
 // カテゴリ分類
 const safeTypes = ['cafe', 'coffee_shop', 'bakery', 'book_store'];
 const changeTypes = ['restaurant', 'ramen_restaurant', 'japanese_restaurant', 'bar'];
@@ -212,7 +249,7 @@ export default async function handler(req, res) {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.googleMapsUri,places.primaryType,places.primaryTypeDisplayName,places.shortFormattedAddress,places.currentOpeningHours',
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.googleMapsUri,places.primaryType,places.primaryTypeDisplayName,places.shortFormattedAddress',
       },
       body: JSON.stringify({
         includedTypes: ['restaurant', 'cafe', 'bar', 'spa', 'park', 'museum', 'book_store'],
@@ -243,11 +280,9 @@ export default async function handler(req, res) {
     const placesData = await placesResponse.json();
     const allPlaces = placesData.places || [];
 
-    // 営業時間外を除外（openNow が明示的に false の場合のみ除外）
-    const places = allPlaces.filter(p => {
-      const openNow = p.currentOpeningHours?.openNow;
-      return openNow !== false; // undefined(データなし)は除外しない
-    });
+    // 営業時間外を推定除外（JST時刻 + 業種ヒューリスティック、API課金なし）
+    const nowHour = getJSTHour();
+    const places = allPlaces.filter(p => isLikelyOpen(p.primaryType, nowHour));
 
     if (places.length === 0) {
       return res.status(200).json({

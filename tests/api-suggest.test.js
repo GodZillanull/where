@@ -45,7 +45,6 @@ describe('/api/suggest: 課金地雷回避', () => {
       'places.primaryType',
       'places.primaryTypeDisplayName',
       'places.shortFormattedAddress',
-      'places.currentOpeningHours',
     ];
 
     // 課金が高いフィールド（使用禁止）
@@ -53,6 +52,7 @@ describe('/api/suggest: 課金地雷回避', () => {
       'places.reviews',
       'places.photos',
       'places.openingHours',
+      'places.currentOpeningHours',
       'places.regularOpeningHours',
       'places.priceLevel',
       'places.rating',
@@ -101,7 +101,7 @@ describe('/api/suggest: 課金地雷回避', () => {
       const fieldMask = fieldMaskMatch[1];
       const fields = fieldMask.split(',').map(f => f.trim());
 
-      expect(fields.length).toBe(7);
+      expect(fields.length).toBe(6);
     });
   });
 });
@@ -131,10 +131,10 @@ describe('/api/suggest: チェーン除外 + DISTANCE', () => {
     expect(apiSuggestCode).toMatch(/isChain/);
   });
 
-  it('営業時間外を除外するフィルタがあること', () => {
-    expect(apiSuggestCode).toMatch(/currentOpeningHours/);
-    expect(apiSuggestCode).toMatch(/openNow/);
-    expect(apiSuggestCode).toMatch(/openNow !== false/);
+  it('JST時刻ベースの営業時間ヒューリスティックがあること', () => {
+    expect(apiSuggestCode).toMatch(/TYPE_HOURS/);
+    expect(apiSuggestCode).toMatch(/function isLikelyOpen/);
+    expect(apiSuggestCode).toMatch(/function getJSTHour/);
   });
 
   it('assignSlots 関数がスロット割り当てを行うこと', () => {
