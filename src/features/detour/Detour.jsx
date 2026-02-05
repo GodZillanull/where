@@ -196,7 +196,7 @@ export default function Detour({ onSuggest }) {
       try {
         const coords = await getStationLatLng(stationName);
         if (coords) {
-          const data = await suggestByLocation(coords.lat, coords.lng, 800);
+          const data = await suggestByLocation(coords.lat, coords.lng, 800, true);
           if (data.items && data.items.length > 0) {
             spots = convertToYorimichiSpots(data.items, stationName + '駅');
           }
@@ -916,6 +916,11 @@ export default function Detour({ onSuggest }) {
                       >
                         {mainZure.name}
                       </span>
+                      {mainSpot.isChain && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#FF9500]/15 text-[#FF9500]">
+                          チェーン
+                        </span>
+                      )}
                     </div>
 
                     <h2 className="text-[24px] font-bold text-[#1D1D1F] leading-tight mb-3">
@@ -1078,6 +1083,11 @@ export default function Detour({ onSuggest }) {
                   {spot.fromPlacesApi && (
                     <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#007AFF]/10 text-[#007AFF]">
                       Google Places
+                    </span>
+                  )}
+                  {spot.isChain && (
+                    <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-[#FF9500]/15 text-[#FF9500]">
+                      チェーン
                     </span>
                   )}
                 </div>
