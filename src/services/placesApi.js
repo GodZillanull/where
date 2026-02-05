@@ -109,22 +109,83 @@ export async function getStationLatLng(stationName) {
 
 // Places API 結果 → 寄り道スポット形式に変換
 const TYPE_DEFAULTS = {
-  cafe:       { emoji: '☕', type: 'cafe',      stayTime: 40, budget: '800円', reason: '' },
-  coffee_shop:{ emoji: '☕', type: 'cafe',      stayTime: 30, budget: '600円', reason: '' },
-  bakery:     { emoji: '🍞', type: 'cafe',      stayTime: 25, budget: '500円', reason: '' },
-  book_store: { emoji: '📚', type: 'bookstore', stayTime: 40, budget: '0円',   reason: '' },
-  restaurant: { emoji: '🍽', type: 'restaurant', stayTime: 50, budget: '1200円', reason: '' },
-  ramen_restaurant:   { emoji: '🍜', type: 'restaurant', stayTime: 30, budget: '1000円', reason: '' },
-  japanese_restaurant: { emoji: '🍱', type: 'restaurant', stayTime: 45, budget: '1200円', reason: '' },
-  bar:        { emoji: '🍻', type: 'bar',       stayTime: 60, budget: '2000円', reason: '' },
-  spa:        { emoji: '♨️', type: 'sento',     stayTime: 60, budget: '800円',  reason: '' },
-  park:       { emoji: '🌳', type: 'park',      stayTime: 30, budget: '0円',   reason: '' },
-  museum:     { emoji: '🏛', type: 'gallery',   stayTime: 60, budget: '1000円', reason: '' },
-  art_gallery:{ emoji: '🎨', type: 'gallery',   stayTime: 45, budget: '800円',  reason: '' },
-  movie_theater: { emoji: '🎬', type: 'cinema', stayTime: 120, budget: '1800円', reason: '' },
+  cafe:       { emoji: '☕', type: 'cafe',      stayTime: 40, budget: '800円', reasons: [
+    '知らない街のカフェって、なぜかワクワクする',
+    '今日の自分に、一杯のご褒美を',
+    'コーヒーの香りで、頭のスイッチを切り替える',
+    'ふらっと入るカフェが、意外と当たりだったりする',
+  ]},
+  coffee_shop:{ emoji: '☕', type: 'cafe',      stayTime: 30, budget: '600円', reasons: [
+    '一杯のコーヒーが、今日を少し特別にする',
+    '立ち寄るだけで気分転換。それで十分',
+    '知らない店のコーヒーは、小さな冒険',
+  ]},
+  bakery:     { emoji: '🍞', type: 'cafe',      stayTime: 25, budget: '500円', reasons: [
+    '焼きたてのパンの匂い。それだけで寄る価値がある',
+    '自分へのお土産に、一つだけ選ぶ贅沢',
+    'パン屋は裏切らない。間違いなく幸せになれる',
+  ]},
+  book_store: { emoji: '📚', type: 'bookstore', stayTime: 40, budget: '0円',   reasons: [
+    '次に読む一冊、偶然の出会いで見つける',
+    '本棚を眺めるだけで、頭が整理される',
+    '買わなくてもいい。背表紙を眺めるだけの時間',
+  ]},
+  restaurant: { emoji: '🍽', type: 'restaurant', stayTime: 50, budget: '1200円', reasons: [
+    '知らない店に飛び込む。それだけで今日は冒険',
+    'いつもと違う味に出会う日にしよう',
+    'メニューを見て決める。それが一番楽しい',
+  ]},
+  ramen_restaurant:   { emoji: '🍜', type: 'restaurant', stayTime: 30, budget: '1000円', reasons: [
+    '一杯で満たされる。シンプルに最高',
+    '帰り道のラーメンは、自分への最高のご褒美',
+    'サッと食べてサッと出る。寄り道の王道',
+  ]},
+  japanese_restaurant: { emoji: '🍱', type: 'restaurant', stayTime: 45, budget: '1200円', reasons: [
+    'ちゃんとした和食って、心まで整う',
+    '丁寧に作られたごはんで、今日の自分を労う',
+    '和食は間違いない。静かに味わう贅沢',
+  ]},
+  bar:        { emoji: '🍻', type: 'bar',       stayTime: 60, budget: '2000円', reasons: [
+    'カウンターで一杯。それが最高の寄り道',
+    '今日の疲れを、一杯で流す',
+    '知らないバーの扉を開ける。大人の冒険',
+  ]},
+  spa:        { emoji: '♨️', type: 'sento',     stayTime: 60, budget: '800円',  reasons: [
+    '湯に浸かれば、今日の疲れが溶けていく',
+    '風呂上がりの一杯の牛乳。それが至福',
+    '何も考えず、ただ温まる。それだけでいい',
+  ]},
+  park:       { emoji: '🌳', type: 'park',      stayTime: 30, budget: '0円',   reasons: [
+    '何もしない贅沢。ベンチに座るだけでいい',
+    '空を見上げる時間、最近とってなくない？',
+    '散歩するだけで、頭がクリアになる',
+  ]},
+  museum:     { emoji: '🏛', type: 'gallery',   stayTime: 60, budget: '1000円', reasons: [
+    '知らないアートに出会う。感性のストレッチ',
+    'たまには脳に違う刺激を入れてみる',
+    '静かな空間で、自分のペースで過ごせる',
+  ]},
+  art_gallery:{ emoji: '🎨', type: 'gallery',   stayTime: 45, budget: '800円',  reasons: [
+    'ふらっとアートを見る。それだけで視野が広がる',
+    '好きか嫌いかだけでいい。理屈はいらない',
+    '誰かの表現に触れる。それが一番の刺激',
+  ]},
+  movie_theater: { emoji: '🎬', type: 'cinema', stayTime: 120, budget: '1800円', reasons: [
+    '2時間、現実を忘れる贅沢',
+    '映画は一人で観るのが一番贅沢',
+    '暗闇の中で、物語に没入する時間',
+  ]},
 };
 
-const DEFAULT_TYPE = { emoji: '📍', type: 'spot', stayTime: 30, budget: '---', reason: '' };
+const DEFAULT_TYPE = { emoji: '📍', type: 'spot', stayTime: 30, budget: '---', reasons: [
+  'ちょっと寄り道。それだけで今日が変わる',
+  '知らない場所を歩く。それが一番の気分転換',
+] };
+
+function pickReason(reasons) {
+  if (!reasons || reasons.length === 0) return '';
+  return reasons[Math.floor(Math.random() * reasons.length)];
+}
 
 /**
  * Places API の結果を寄り道スポット形式に変換
@@ -158,7 +219,7 @@ export function convertToYorimichiSpots(items, stationName) {
       noiseLevel: 2,
       reservation: 0,
       cashOnly: false,
-      reason: defaults.reason, // 空。後でyorimichiData.jsに手動で入れる
+      reason: pickReason(defaults.reasons),
       backup: '',
       highlight: item.typeLabel || 'スポット',
       hours: '',
