@@ -212,7 +212,7 @@ export default async function handler(req, res) {
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'places.id,places.displayName,places.googleMapsUri,places.primaryType,places.primaryTypeDisplayName,places.shortFormattedAddress',
+        'X-Goog-FieldMask': 'places.id,places.displayName,places.googleMapsUri,places.primaryType,places.primaryTypeDisplayName,places.shortFormattedAddress,places.currentOpeningHours',
       },
       body: JSON.stringify({
         includedTypes: ['restaurant', 'cafe', 'bar', 'spa', 'park', 'museum', 'book_store'],
@@ -241,12 +241,18 @@ export default async function handler(req, res) {
     }
 
     const placesData = await placesResponse.json();
-    const places = placesData.places || [];
+    const allPlaces = placesData.places || [];
+
+    // 営業時間外を除外（openNow が明示的に false の場合のみ除外）
+    const places = allPlaces.filter(p => {
+      const openNow = p.currentOpeningHours?.openNow;
+      return openNow !== false; // undefined(データなし)は除外しない
+    });
 
     if (places.length === 0) {
       return res.status(200).json({
         items: [],
-        message: '周辺にスポットが見つかりませんでした'
+        message: '現在営業中のスポットが見つかりませんでした'
       });
     }
 
