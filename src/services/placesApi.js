@@ -182,7 +182,55 @@ const DEFAULT_TYPE = { emoji: '📍', type: 'spot', stayTime: 30, budget: '---',
   '知らない場所を歩く。それが一番の気分転換',
 ] };
 
-function pickReason(reasons) {
+// 時間帯別テンプレート（朝/昼/夕方/夜）
+const TIME_TEMPLATES = {
+  morning: { // 5-11時
+    cafe: '朝の一杯は、夜の3倍おいしい。',
+    coffee_shop: '出勤前の一杯。今日のスイッチを入れる。',
+    bakery: '焼きたての香りで始まる朝。',
+    restaurant: '朝から開いてる店は、なんか信頼できる。',
+  },
+  noon: { // 11-14時
+    restaurant: 'ランチは外で。それだけで午後が変わる。',
+    ramen_restaurant: '昼のラーメンは正義。',
+    cafe: 'ランチ後のコーヒー。頭をリセット。',
+  },
+  evening: { // 14-18時
+    cafe: '午後のカフェ。自分だけの時間。',
+    book_store: '仕事終わりの本屋。脳を切り替える。',
+    museum: '夕方の美術館は空いてる。',
+    art_gallery: '仕事モードから切り替える一服。',
+  },
+  night: { // 18-24時
+    bar: '今日の疲れを、一杯で流す。',
+    restaurant: '夜ごはんは外で。自分へのご褒美。',
+    ramen_restaurant: '〆のラーメン。最高の寄り道。',
+    spa: '仕事の疲れを湯船で溶かす。',
+    cafe: '夜カフェ。静かに今日を振り返る。',
+  },
+  latenight: { // 0-5時
+    bar: '深夜のカウンター。大人の時間。',
+    ramen_restaurant: '深夜のラーメンは背徳の味。',
+  },
+};
+
+function getTimeSlot() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 11) return 'morning';
+  if (h >= 11 && h < 14) return 'noon';
+  if (h >= 14 && h < 18) return 'evening';
+  if (h >= 18 && h < 24) return 'night';
+  return 'latenight';
+}
+
+function pickReason(reasons, typeKey) {
+  // 時間帯に合ったテンプレがあれば優先
+  const slot = getTimeSlot();
+  const timeReason = TIME_TEMPLATES[slot]?.[typeKey];
+  if (timeReason && Math.random() < 0.6) {
+    return timeReason;
+  }
+  // なければ通常のランダム
   if (!reasons || reasons.length === 0) return '';
   return reasons[Math.floor(Math.random() * reasons.length)];
 }
@@ -195,10 +243,10 @@ function pickReason(reasons) {
  */
 export function convertToYorimichiSpots(items, stationName) {
   return items.map((item) => {
-    const typeKey = item.typeLabel ? Object.keys(TYPE_DEFAULTS).find(
+    const typeKey = item.primaryType?.toLowerCase() || (item.typeLabel ? Object.keys(TYPE_DEFAULTS).find(
       k => item.typeLabel.toLowerCase().includes(k.replace('_', ' ')) ||
            k.includes(item.typeLabel.toLowerCase())
-    ) : null;
+    ) : null);
     const defaults = TYPE_DEFAULTS[typeKey] || DEFAULT_TYPE;
 
     return {
@@ -219,7 +267,7 @@ export function convertToYorimichiSpots(items, stationName) {
       noiseLevel: 2,
       reservation: 0,
       cashOnly: false,
-      reason: pickReason(defaults.reasons),
+      reason: pickReason(defaults.reasons, typeKey),
       backup: '',
       highlight: item.typeLabel || 'スポット',
       hours: '',
